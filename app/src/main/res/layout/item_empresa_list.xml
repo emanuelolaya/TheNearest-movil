@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="10dp"
+    android:paddingRight="10dp"
+    android:paddingBottom="5dp"
+    android:paddingTop="5dp"
+    android:background="#ffffff"
+    >
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="152dp"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/nombre"
+                android:text="Name"
+                android:textColor="#22ff00"
+                android:textSize="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/direccion"
+                android:text="1000 $"
+                android:textSize="14dp"
+                android:textColor="#f92a3f"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/web"
+                android:text="Description"
+                android:textColor="#00ffea"
+                android:textSize="15dp" />
+
+            <TextView
+                android:text="Domicilios: "
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/domicilios" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="right">
+
+            <Button
+                android:text="detalles"
+                android:layout_width="115dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/btdetalles" />
+
+            <Button
+                android:text="Ver En Mapa"
+                android:layout_width="115dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/btmapa" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>
