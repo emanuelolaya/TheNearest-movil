@@ -3,8 +3,8 @@ package com.thenearest.thenearest;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
@@ -21,11 +21,15 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -69,6 +73,64 @@ public class EmpresaDetalle extends AppCompatActivity {
         b = getIntent().getExtras();
         nit= b.getInt("nit");
 
+
+        DatabaseReference myRef = FirebaseDatabase.getInstance().getReference("empresas/"+nit);
+
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(final DataSnapshot dataSnapshot) {
+                System.out.println("snapshop"+dataSnapshot.getValue().toString());
+
+                final Empresa empresa = new Empresa();
+
+                empresa.setNombre(dataSnapshot.child("nombre").getValue().toString());
+                empresa.setDireccion(dataSnapshot.child("direccion").getValue().toString());
+                empresa.setTelefono(Integer.parseInt(dataSnapshot.child("telefono").getValue().toString()));
+                empresa.setWeb(dataSnapshot.child("web").getValue().toString());
+                empresa.setDomicilios(dataSnapshot.child("domicilios").getValue().toString());
+                empresa.setEmail(dataSnapshot.child("email").getValue().toString());
+                empresa.setHorario1(dataSnapshot.child("horario1/desde").getValue().toString()+" - "+dataSnapshot.child("horario1/hasta").getValue().toString());
+                empresa.setHorario2(dataSnapshot.child("horario2/desde").getValue().toString()+" - "+dataSnapshot.child("horario2/hasta").getValue().toString());
+                System.out.println("999999999" + empresa.getHorario2());
+
+                nombre.setText("Nombre: "+empresa.getNombre());
+                direccion.setText("Direccion: "+empresa.getDireccion());
+                telefono.setText("Telefono: "+empresa.getTelefono());
+                web.setText("Pagina Web: "+empresa.getWeb());
+                domicilios.setText("Domicilios: "+empresa.getDomicilios());
+                email.setText("Email: "+empresa.getEmail());
+                if(empresa.getHorario2().length()>5){
+                    horarios.setText("Horarios: "+empresa.getHorario1()+" / "+empresa.getHorario2());
+                }else{
+                    horarios.setText("Horario: "+empresa.getHorario1());
+                }
+                mapa.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Bundle b = new Bundle();
+                        b.putString("nombre", empresa.getNombre());
+                        b.putDouble("latitud", Double.parseDouble(dataSnapshot.child("latitud").getValue().toString()));
+                        b.putDouble("longitud", Double.parseDouble(dataSnapshot.child("longitud").getValue().toString()));
+                        Intent i = new Intent(getBaseContext(),EmpresaMapa.class);
+                        i.putExtras(b);
+                        startActivity(i);
+                    }
+                });
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                // Failed to read value
+                Log.i("999999999", "Failed to read valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.", error.toException());
+            }
+        });
+
+
+
+
+
+
         System.out.println("999999999"+nit);
 
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
@@ -96,8 +158,6 @@ public class EmpresaDetalle extends AppCompatActivity {
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
-        HiloDetalle hiloDetalle = new HiloDetalle();
-        hiloDetalle.execute(b.getInt("nit"));
 
     }
 
@@ -165,7 +225,8 @@ public class EmpresaDetalle extends AppCompatActivity {
          */
         private static final String nit = "nit";
         ImageView imageslide;
-        private LruCache<String, Bitmap> mMemoryCache;
+        private StorageReference mStorageRef;
+        Bitmap bitmap;
 
         public ImagenFragment1() {
         }
@@ -182,86 +243,39 @@ public class EmpresaDetalle extends AppCompatActivity {
             return fragment;
         }
 
-        public void addBitmapToMemoryCache(String key, Bitmap bitmap) {
-
-            if (getBitmapFromMemCache(key) == null) {
-                mMemoryCache.put(key, bitmap);
-            }
-        }
-
-        public Bitmap getBitmapFromMemCache(String key) {
-            return mMemoryCache.get(key);
-        }
-
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_slide, container, false);
             imageslide = (ImageView) rootView.findViewById(R.id.imageslide);
-            final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
-            final int cacheSize = maxMemory / 8;
 
-            mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
-                @Override
-                protected int sizeOf(String key, Bitmap bitmap) {
-                    // The cache size will be measured in kilobytes rather than
-                    // number of items.
-                    return bitmap.getByteCount() / 1024;
-                }
-            };
-            Hiloimagenes hiloimagenes = new Hiloimagenes();
-            hiloimagenes.execute(getArguments().getInt(nit));
-            //imageslide.setImageResource(R.drawable.background);
-            return rootView;
-        }
-        public  class Hiloimagenes extends AsyncTask<Integer,Integer,Bitmap>{
-            @Override
-            protected void onPostExecute(Bitmap bitmap) {
+            if(bitmap==null){
 
-                    imageslide.setImageBitmap(getBitmapFromMemCache("imagen1"));
+                mStorageRef = FirebaseStorage.getInstance().getReference();
+                StorageReference img1 = mStorageRef.child("fotos/empresas/"+getArguments().getInt(nit)+"/1");
 
-            }
-            @Override
-            protected Bitmap doInBackground(Integer... nit) {
-                final String[] url = new String[1];
-                DatabaseReference myRef = FirebaseDatabase.getInstance().getReference("empresas/"+nit[0]+"/imagenes/0");
-                System.out.println("referencia"+myRef.toString());
-                myRef.addValueEventListener(new ValueEventListener() {
+                final long ONE_MEGABYTE = 1024 * 1024;
+                img1.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
                     @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        System.out.println("snapshop"+dataSnapshot.getValue().toString());
-                        url[0] = dataSnapshot.getValue().toString();
+                    public void onSuccess(byte[] bytes) {
+                        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        imageslide.setImageBitmap(bitmap);
                     }
-
+                }).addOnFailureListener(new OnFailureListener() {
                     @Override
-                    public void onCancelled(DatabaseError error) {
-                        // Failed to read value
-                        Log.i("999999999", "Failed to read valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.", error.toException());
+                    public void onFailure(@NonNull Exception exception) {
+                        // Handle any errors
                     }
                 });
-                final Bitmap[] bitmap = new Bitmap[1];
-                System.out.println("urrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr "+url[0]);
-                if(getBitmapFromMemCache("imagen1")==null) {
-                    try {
-                        URL urll = new URL(url[0]);
-                        System.out.println("urlllllllllllllllllllllllllllllllllllllllllllll" + urll.toString());
-                        HttpURLConnection connection = (HttpURLConnection) urll.openConnection();
-                        connection.setDoInput(true);
-                        connection.connect();
-                        InputStream input = connection.getInputStream();
-                        bitmap[0] = BitmapFactory.decodeStream(input);
-                        addBitmapToMemoryCache("imagen1", bitmap[0]);
 
-                        return bitmap[0];
-
-                    } catch (java.io.IOException e) {
-                        e.printStackTrace();
-                        System.out.println("Errorrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr" + e);
-                    }
-                }
-                return null;
+            }else{
+                imageslide.setImageBitmap(bitmap);
             }
+
+
+            return rootView;
         }
+
     }
 
     public static class ImagenFragment2 extends Fragment {
@@ -271,6 +285,8 @@ public class EmpresaDetalle extends AppCompatActivity {
          */
         private static final String nit = "nit";
         ImageView imageslide;
+        Bitmap bitmap;
+        private StorageReference mStorageRef;
 
         public ImagenFragment2() {
         }
@@ -292,50 +308,31 @@ public class EmpresaDetalle extends AppCompatActivity {
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_slide, container, false);
             imageslide = (ImageView) rootView.findViewById(R.id.imageslide);
-            Hiloimagenes hiloimagenes = new Hiloimagenes();
-            hiloimagenes.execute(getArguments().getInt(nit));
-            //imageslide.setImageResource(R.drawable.background);
-            return rootView;
-        }
-        public  class Hiloimagenes extends AsyncTask<Integer,Integer,Bitmap>{
-            @Override
-            protected void onPostExecute(Bitmap bitmap) {
-                imageslide.setImageBitmap(bitmap);
-            }
-            @Override
-            protected Bitmap doInBackground(Integer... nit) {
-                final String[] url = new String[1];
-                DatabaseReference myRef = FirebaseDatabase.getInstance().getReference("empresas/"+nit[0]+"/imagenes/1");
-                System.out.println("referencia"+myRef.toString());
-                myRef.addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        System.out.println("snapshop"+dataSnapshot.getValue().toString());
-                        url[0] = dataSnapshot.getValue().toString();
-                    }
 
+            if(bitmap==null){
+
+                mStorageRef = FirebaseStorage.getInstance().getReference();
+                StorageReference img1 = mStorageRef.child("fotos/empresas/"+getArguments().getInt(nit)+"/2");
+
+                final long ONE_MEGABYTE = 1024 * 1024;
+                img1.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
                     @Override
-                    public void onCancelled(DatabaseError error) {
-                        // Failed to read value
-                        Log.i("999999999", "Failed to read valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.", error.toException());
+                    public void onSuccess(byte[] bytes) {
+                        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        imageslide.setImageBitmap(bitmap);
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                        // Handle any errors
                     }
                 });
-                final Bitmap[] bitmap = new Bitmap[1];
-                System.out.println("urrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr "+url[0]);
-                try {
-                    URL urll = new URL(url[0]);
-                    System.out.println("urlllllllllllllllllllllllllllllllllllllllllllll"+urll.toString());
-                    HttpURLConnection connection = (HttpURLConnection) urll.openConnection();
-                    connection.setDoInput(true);
-                    connection.connect();
-                    InputStream input = connection.getInputStream();
-                    bitmap[0] = BitmapFactory.decodeStream(input);
-                } catch (java.io.IOException e) {
-                    e.printStackTrace();
-                    System.out.println("Errorrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr" + e);
-                }
-                return bitmap[0];
+
+            }else{
+                imageslide.setImageBitmap(bitmap);
             }
+
+            return rootView;
         }
     }
 
@@ -346,6 +343,8 @@ public class EmpresaDetalle extends AppCompatActivity {
          */
         private static final String nit = "nit";
         ImageView imageslide;
+        private StorageReference mStorageRef;
+        Bitmap bitmap;
 
 
         public ImagenFragment3() {
@@ -369,62 +368,33 @@ public class EmpresaDetalle extends AppCompatActivity {
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_slide, container, false);
             imageslide = (ImageView) rootView.findViewById(R.id.imageslide);
-
-
-            // Use 1/8th of the available memory for this memory cache.
-
-            Hiloimagenes hiloimagenes = new Hiloimagenes();
-            hiloimagenes.execute(getArguments().getInt(nit));
+            //getArguments().getInt(nit)
             //imageslide.setImageResource(R.drawable.background);
-            return rootView;
-        }
-        public  class Hiloimagenes extends AsyncTask<Integer,Integer,Bitmap>{
-            @Override
-            protected void onPostExecute(Bitmap bitmap) {
-                if(imageslide.getImageMatrix()==null){
-                    System.out.println("vaciooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo si");
-                }else{
-                    System.out.println("vaciooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo no");
-                }
-                imageslide.setImageBitmap(bitmap);
-            }
-            @Override
-            protected Bitmap doInBackground(Integer... nit) {
-                final String[] url = new String[1];
-                DatabaseReference myRef = FirebaseDatabase.getInstance().getReference("empresas/"+nit[0]+"/imagenes/2");
-                System.out.println("referencia"+myRef.toString());
-                myRef.addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        System.out.println("snapshop"+dataSnapshot.getValue().toString());
-                        url[0] = dataSnapshot.getValue().toString();
-                        System.out.println("urrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr "+url[0]);
-                    }
 
+            if(bitmap==null){
+
+                mStorageRef = FirebaseStorage.getInstance().getReference();
+                StorageReference img1 = mStorageRef.child("fotos/empresas/"+getArguments().getInt(nit)+"/3");
+
+                final long ONE_MEGABYTE = 1024 * 1024;
+                img1.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
                     @Override
-                    public void onCancelled(DatabaseError error) {
-                        // Failed to read value
-                        Log.i("999999999", "Failed to read valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.", error.toException());
+                    public void onSuccess(byte[] bytes) {
+                        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        imageslide.setImageBitmap(bitmap);
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                        // Handle any errors
                     }
                 });
-                final Bitmap[] bitmap = new Bitmap[1];
-                System.out.println("urrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr "+url[0]);
 
-                try {
-                    URL urll = new URL(url[0]);
-                    System.out.println("urlllllllllllllllllllllllllllllllllllllllllllll"+urll.toString());
-                    HttpURLConnection connection = (HttpURLConnection) urll.openConnection();
-                    connection.setDoInput(true);
-                    connection.connect();
-                    InputStream input = connection.getInputStream();
-                    bitmap[0] = BitmapFactory.decodeStream(input);
-                } catch (java.io.IOException e) {
-                    e.printStackTrace();
-                    System.out.println("Errorrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr" + e);
-                }
-
-                return bitmap[0];
+            }else{
+                imageslide.setImageBitmap(bitmap);
             }
+
+            return rootView;
         }
     }
 
@@ -481,84 +451,4 @@ public class EmpresaDetalle extends AppCompatActivity {
             return null;
         }
     }
-
-    public class HiloDetalle extends AsyncTask<Integer,Void,Bitmap>{
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-
-        }
-
-        @Override
-        protected void onCancelled(Bitmap empresa) {
-            super.onCancelled(empresa);
-        }
-
-        @Override
-        protected Bitmap doInBackground(Integer... nit) {
-            final Empresa empresa =new Empresa();
-            final Bitmap[] bitmap = new Bitmap[1];
-
-            System.out.println("999999999"+nit[0]);
-
-            DatabaseReference myRef = FirebaseDatabase.getInstance().getReference("empresas/"+nit[0]);
-
-            System.out.println("999999999 "+myRef.toString());
-
-
-
-            myRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(final DataSnapshot dataSnapshot) {
-                    System.out.println("snapshop"+dataSnapshot.getValue().toString());
-
-                    empresa.setNombre(dataSnapshot.child("nombre").getValue().toString());
-                    empresa.setDireccion(dataSnapshot.child("direccion").getValue().toString());
-                    empresa.setTelefono(Integer.parseInt(dataSnapshot.child("telefono").getValue().toString()));
-                    empresa.setWeb(dataSnapshot.child("web").getValue().toString());
-                    empresa.setDomicilios(dataSnapshot.child("domicilios").getValue().toString());
-                    empresa.setEmail(dataSnapshot.child("email").getValue().toString());
-                    empresa.setHorario1(dataSnapshot.child("horario1/desde").getValue().toString()+" - "+dataSnapshot.child("horario1/hasta").getValue().toString());
-                    empresa.setHorario2(dataSnapshot.child("horario2/desde").getValue().toString()+" - "+dataSnapshot.child("horario2/hasta").getValue().toString());
-                    System.out.println("999999999" + empresa.getHorario2());
-
-                    nombre.setText("Nombre: "+empresa.getNombre());
-                    direccion.setText("Direccion: "+empresa.getDireccion());
-                    telefono.setText("Telefono: "+empresa.getTelefono());
-                    web.setText("Pagina Web: "+empresa.getWeb());
-                    domicilios.setText("Domicilios: "+empresa.getDomicilios());
-                    email.setText("Email: "+empresa.getEmail());
-                    if(empresa.getHorario2().length()>5){
-                        horarios.setText("Horarios: "+empresa.getHorario1()+" / "+empresa.getHorario2());
-                    }else{
-                        horarios.setText("Horario: "+empresa.getHorario1());
-                    }
-                    mapa.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            Bundle b = new Bundle();
-                            b.putString("nombre", empresa.getNombre());
-                            b.putDouble("latitud", Double.parseDouble(dataSnapshot.child("latitud").getValue().toString()));
-                            b.putDouble("longitud", Double.parseDouble(dataSnapshot.child("longitud").getValue().toString()));
-                            Intent i = new Intent(getBaseContext(),EmpresaMapa.class);
-                            i.putExtras(b);
-                            startActivity(i);
-                        }
-                    });
-
-                }
-
-                @Override
-                public void onCancelled(DatabaseError error) {
-                    // Failed to read value
-                    Log.i("999999999", "Failed to read valueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.", error.toException());
-                }
-            });
-
-
-
-            return bitmap[0];
-        }
-    }
-
-
 }

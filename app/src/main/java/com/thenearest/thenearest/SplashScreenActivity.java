@@ -38,7 +38,6 @@ public class SplashScreenActivity extends AppCompatActivity {
         // Hide title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.splash_screen);
-        getSupportActionBar().hide();
 
         tiempo = new Tiempo();
         tiempo.Contar();
