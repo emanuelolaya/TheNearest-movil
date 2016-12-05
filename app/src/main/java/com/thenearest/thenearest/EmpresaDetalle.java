@@ -8,7 +8,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.util.LruCache;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -54,7 +53,6 @@ public class EmpresaDetalle extends AppCompatActivity {
     TextView nombre, direccion, telefono, web, domicilios, email, horarios;
     int nit;
     Button mapa;
-    private LruCache<String, Bitmap> mMemoryCache;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +67,7 @@ public class EmpresaDetalle extends AppCompatActivity {
         email = (TextView)findViewById(R.id.txtemail);
         horarios = (TextView)findViewById(R.id.txthorarios);
         mapa = (Button) findViewById(R.id.mapa);
+
         Bundle b = new Bundle();
         b = getIntent().getExtras();
         nit= b.getInt("nit");
@@ -126,30 +125,6 @@ public class EmpresaDetalle extends AppCompatActivity {
             }
         });
 
-
-
-
-
-
-        System.out.println("999999999"+nit);
-
-        final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
-
-        // Use 1/8th of the available memory for this memory cache.
-        final int cacheSize = maxMemory / 8;
-
-        mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
-            @Override
-            protected int sizeOf(String key, Bitmap bitmap) {
-                // The cache size will be measured in kilobytes rather than
-                // number of items.
-                return bitmap.getByteCount() / 1024;
-            }
-        };
-
-
-
-
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager(),nit);
@@ -180,16 +155,6 @@ public class EmpresaDetalle extends AppCompatActivity {
 
     }
 
-    public void addBitmapToMemoryCache(String key, Bitmap bitmap) {
-
-        if (getBitmapFromMemCache(key) == null) {
-            mMemoryCache.put(key, bitmap);
-        }
-    }
-
-    public Bitmap getBitmapFromMemCache(String key) {
-        return mMemoryCache.get(key);
-    }
 
 
     @Override
